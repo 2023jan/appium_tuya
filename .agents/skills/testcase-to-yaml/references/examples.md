@@ -107,12 +107,13 @@ execution:
 
 preconditions:
   - "设备已经与智能生活 App 配网"
-  - "设备名称为 V4#4"
+  - "设备名称与 environment.iot_device.name 一致"
   - "设备当前在线"
   - "用户已经登录"
 
 test_data:
-  device_name: "V4#4"
+  device_name:
+    value_ref: "environment.iot_device.name"
 
 steps:
   - id: 1
@@ -123,15 +124,15 @@ steps:
     expected: []
   - id: 2
     action: "查找，必要时滚动"
-    target: "首页设备列表中名称为 V4#4 的设备"
+    target: "首页设备列表中的目标设备"
     value: ""
-    value_ref: ""
+    value_ref: "environment.iot_device.name"
     expected: []
   - id: 3
     action: "点击"
-    target: "名称为 V4#4 的设备卡片"
+    target: "目标设备卡片"
     value: ""
-    value_ref: ""
+    value_ref: "environment.iot_device.name"
     expected:
       - "进入设备详情页"
       - "页面显示设备相关信息"
@@ -298,24 +299,25 @@ execution:
 preconditions:
   - "设备已与智能生活 App 配网成功"
   - "设备当前在线"
-  - "设备名称为 V4#4"
+  - "设备名称与 environment.iot_device.name 一致"
 
 test_data:
-  device_name: "V4#4"
+  device_name:
+    value_ref: "environment.iot_device.name"
 
 steps:
   - id: 1
     action: "进入并查找，必要时向上滚动"
-    target: "智能生活 App 首页中名称为 V4#4 的设备"
+    target: "智能生活 App 首页中的目标设备"
     value: ""
-    value_ref: ""
+    value_ref: "environment.iot_device.name"
     expected:
-      - "首页存在名称为 V4#4 的设备"
+      - "首页存在目标设备"
   - id: 2
     action: "点击"
-    target: "名称为 V4#4 的设备卡片"
+    target: "目标设备卡片"
     value: ""
-    value_ref: ""
+    value_ref: "environment.iot_device.name"
     expected:
       - "进入详情页"
       - "页面展示温度、湿度等设备信息"

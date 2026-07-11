@@ -33,12 +33,12 @@ quality_gate:
       reason: "执行结束后设备、账号和绑定状态不变。"
   hard_blockers: []
   warnings:
-    - "App 显示名可能因手机品牌或应用市场而不同；当前测试机显示为 TEST-智能生活，其他已知测试机可能显示为智能生活。"
+    - "App 显示名可能因手机品牌或应用市场而不同，以 environment.app.display_name 和名称别名为准。"
     - "当前 Xiaomi 测试机因无 SIM 卡无法启用 MIUI USB 安装，Appium Settings 不可安装；执行时跳过设备初始化。"
 
 id: "CASE00"
 name: "进入设备详情页并查看设备信息"
-description: "验证已绑定且在线的 V4#4 可以进入设备详情页和高级设置页，并在返回首页后保持原有状态。"
+description: "验证环境配置中的目标设备可以进入设备详情页和高级设置页，并在返回首页后保持原有状态。"
 module: "设备"
 priority: ""
 tags: []
@@ -52,40 +52,34 @@ execution:
 
 preconditions:
   - "设备已经与智能生活 App 配网"
-  - "设备名称为 V4#4"
+  - "设备名称与 environment.iot_device.name 一致"
   - "设备当前在线"
   - "用户已经登录"
 
 test_data:
-  device_name: "V4#4"
-  app_display_name: "TEST-智能生活"
-  app_display_name_aliases:
-    - "智能生活"
-  app_package: "com.tuya.smartlifeiot"
-  app_launch_activity: "com.smart.ThingSplashActivity"
-  app_version: "7.5.0"
-  appium_settings_available: false
+  device_name:
+    value_ref: "environment.iot_device.name"
 
 steps:
   - id: 1
     action: "启动"
-    target: "智能生活 App（当前测试机显示为 TEST-智能生活）"
+    target: "环境配置中的目标 App"
     value: ""
     value_ref: ""
     expected: []
 
   - id: 2
     action: "查找，必要时滚动"
-    target: "首页设备列表中名称为 V4#4 的设备"
+    target: "首页设备列表中的目标设备"
     value: ""
-    value_ref: ""
+    value_ref: "environment.iot_device.name"
     expected: []
 
   - id: 3
     action: "点击"
-    target: "名称为 V4#4 的设备卡片"
+    target: "目标设备卡片"
     value: ""
-    value_ref: ""
+    value_ref: "environment.iot_device.name"
     expected:
       - "成功进入设备详情页"
       - "页面显示设备相关信息"
@@ -114,7 +108,7 @@ steps:
     value: ""
     value_ref: ""
     expected:
-      - "首页仍然存在 V4#4"
+      - "首页仍然存在目标设备"
 
 expected:
   - "用例结束后设备和账号状态没有被修改"

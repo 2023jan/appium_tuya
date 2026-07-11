@@ -10,7 +10,7 @@ quality_gate:
     objective_and_scope:
       score: 10
       max_score: 10
-      reason: "删除 V4#4 后在配网窗口内重新添加并恢复设备，目标明确。"
+      reason: "删除目标设备后在配网窗口内重新添加并恢复设备，目标明确。"
     preconditions:
       score: 14
       max_score: 15
@@ -39,44 +39,45 @@ quality_gate:
 
 id: "CASE02"
 name: "删除设备后重新配网成功"
-description: "删除已绑定的 V4#4，在设备自动进入配网模式后的三分钟内重新添加，并验证最终进入设备详情页。"
+description: "删除已绑定的目标设备，在设备自动进入配网模式后的三分钟内重新添加，并验证最终进入设备详情页。"
 module: "设备配网"
 priority: ""
 tags: []
 
 execution:
   repeatable: true
-  destructive: true
+  destructive: false
   manual_setup_required: false
-  manual_cleanup_required: true
+  manual_cleanup_required: false
   default_regression_enabled: false
 
 preconditions:
   - "设备已经与智能生活 App 配网成功"
   - "设备当前在线"
-  - "设备名称为 V4#4"
+  - "设备名称与 environment.iot_device.name 一致"
   - "删除成功后设备自动进入配网模式，并持续三分钟"
   - "手机已连接用于设备配网的 Wi-Fi"
 
 test_data:
-  device_name: "V4#4"
-  device_type: "Wi-Fi温湿度传感器"
+  device_name:
+    value_ref: "environment.iot_device.name"
+  device_type:
+    value_ref: "environment.iot_device.type"
   wifi_information_source: "当前手机连接的 Wi-Fi，由 App 默认填充"
-  app_package: "com.tuya.smartlifeiot"
 
 steps:
   - id: 1
     action: "查找，必要时滚动"
-    target: "智能生活 App 首页中名称为 V4#4 的设备"
+    target: "智能生活 App 首页中的目标设备"
     value: ""
-    value_ref: ""
+    value_ref: "environment.iot_device.name"
     expected:
-      - "首页存在名称为 V4#4 的设备"
+      - "首页存在目标设备"
   - id: 2
     action: "进入详情页并打开高级设置"
-    target: "名称为 V4#4 的设备"
+    target: "目标设备"
     value: ""
-    value_ref: ""
+    value_ref: "environment.iot_device.name"
     expected:
       - "高级设置页存在“移除设备”按钮"
   - id: 3
@@ -93,7 +94,7 @@ steps:
     value_ref: ""
     expected:
       - "删除成功并返回智能生活 App 首页"
-      - "首页不存在名称为 V4#4 的设备"
+      - "首页不存在目标设备"
   - id: 5
     action: "点击"
     target: "首页右上角的加号"
@@ -109,12 +110,12 @@ steps:
     value_ref: ""
     expected:
       - "进入标题为“添加设备”的页面"
-      - "页面出现“Wi-Fi温湿度传感器”设备类型"
+      - "页面出现环境配置中的设备类型"
   - id: 7
     action: "点击"
-    target: "Wi-Fi温湿度传感器设备类型"
+    target: "环境配置中的设备类型"
     value: ""
-    value_ref: ""
+    value_ref: "environment.iot_device.type"
     expected:
       - "底部显示标题为“请输入Wi-Fi信息”的弹窗"
       - "App 默认显示当前手机连接的 Wi-Fi 信息"
@@ -126,7 +127,7 @@ steps:
     value_ref: ""
     expected:
       - "页面标题为“添加设备”"
-      - "页面显示“Wi-Fi温湿度传感器”和“正在添加”"
+      - "页面显示目标设备类型和“正在添加”"
       - "页面显示配网进度"
   - id: 9
     action: "等待"
@@ -144,12 +145,12 @@ steps:
     value_ref: ""
     expected:
       - "先返回智能生活 App 首页"
-      - "随后进入 V4#4 设备详情页"
+      - "随后进入目标设备详情页"
       - "详情页显示设备名称、温度和湿度"
 
 expected:
-  - "V4#4 删除后重新配网成功"
-  - "用例结束时 V4#4 已恢复到账号并可进入设备详情页"
+  - "目标设备删除后重新配网成功"
+  - "用例结束时目标设备已恢复到账号并可进入设备详情页"
 
 cleanup: []
 missing_info: []

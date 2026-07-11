@@ -1,0 +1,19 @@
+phone:
+  udid: ""
+  platform_name: "Android"
+  automation_name: "UiAutomator2"
+  skip_device_initialization: true
+  skip_server_installation: true
+
+app:
+  package: "com.tuya.smartlifeiot"
+  activity: "com.smart.ThingSplashActivity"
+  display_name: "智能生活"
+  display_name_aliases:
+    - "智能生活"
+    - "TEST-智能生活"
+  version: "7.5.0"
+
+iot_device:
+  name: "V4#4"
+  type: "Wi-Fi温湿度传感器"

@@ -139,6 +139,7 @@ source_text: |
 
 - 不包含 locator、XPath、resource-id、accessibility id、坐标或等待秒数。
 - 不自动生成原始测试未要求的步骤、异常场景或断言。
+- 项目环境已经管理的手机、App 和 IoT 设备字段使用 `environment.*` 引用，不在用例规格中重复保存当前值。
 - `expected` 必须可由 UI、日志、设备状态、接口状态或用户指定的其他证据观察。
 - `gate_status: passed` 时，`automation_ready` 必须为 `true`，`hard_blockers` 必须为空。
 - `review_required` 和 `blocked` 只能用于质量报告或明确标记的预览，不保存为正式自动化规格。
@@ -155,6 +156,20 @@ test_data:
 ```
 
 引用值应由环境变量、Git Ignore 下的本地私有配置或等效秘密管理方式提供。若无法安全替换敏感值，加入硬阻塞并停止生成正式 YAML。
+
+## 环境引用
+
+环境相关测试数据使用稳定引用：
+
+```yaml
+test_data:
+  device_name:
+    value_ref: "environment.iot_device.name"
+  device_type:
+    value_ref: "environment.iot_device.type"
+```
+
+步骤通过 `value_ref` 关联同一环境值，`target` 只保留“目标设备”等业务语义。原始输入中的具体设备名继续原样保存在 `source_text`，不因环境引用而改写历史原文。
 
 ## 兼容与更新
 

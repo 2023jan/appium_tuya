@@ -9,6 +9,10 @@ from urllib.request import urlopen
 
 import pytest
 
+from appium_auto.core.driver_factory import create_android_driver
+from appium_auto.core.environment import EnvironmentConfig, load_environment
+from appium_auto.core.run_context import RunContext
+
 
 DEFAULT_SERVER_URL = "http://127.0.0.1:4723"
 DEFAULT_START_TIMEOUT = 30.0
@@ -120,3 +124,23 @@ def appium_server_url() -> str:
         yield server_url
     finally:
         _stop_process(process)
+
+
+@pytest.fixture(scope="session")
+def environment() -> EnvironmentConfig:
+    return load_environment()
+
+
+@pytest.fixture
+def driver(environment: EnvironmentConfig, appium_server_url: str):
+    appium_driver = create_android_driver(appium_server_url, environment)
+    yield appium_driver
+    appium_driver.quit()
+
+
+@pytest.fixture
+def run_context(request: pytest.FixtureRequest) -> RunContext:
+    marker = request.node.get_closest_marker("case_id")
+    if marker is None or not marker.args:
+        pytest.fail("测试用例缺少 @pytest.mark.case_id 标记")
+    return RunContext.create(str(marker.args[0]))

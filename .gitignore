@@ -41,6 +41,8 @@ capabilities*.yaml
 capabilities*.yml
 appium_auto/config/local.*
 appium_auto/config/*.local.*
+appium_auto/config/local.yaml
+appium_auto/config/wifi.local.yaml
 
 # 本地测试资料，可能包含真实账号、设备名称、客户场景或内部业务信息
 appium_auto/specs/local/

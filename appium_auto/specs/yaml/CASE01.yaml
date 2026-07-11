@@ -38,7 +38,7 @@ quality_gate:
 
 id: "CASE01"
 name: "删除设备成功"
-description: "从高级设置中解除 V4#4 的绑定，并验证首页不再显示该设备。"
+description: "从高级设置中解除环境配置中目标设备的绑定，并验证首页不再显示该设备。"
 module: "设备"
 priority: ""
 tags: []
@@ -53,32 +53,26 @@ execution:
 preconditions:
   - "设备已经与智能生活 App 配网成功"
   - "设备当前在线"
-  - "设备名称为 V4#4"
+  - "设备名称与 environment.iot_device.name 一致"
 
 test_data:
-  device_name: "V4#4"
-  app_display_name: "TEST-智能生活"
-  app_display_name_aliases:
-    - "智能生活"
-  app_package: "com.tuya.smartlifeiot"
-  app_launch_activity: "com.smart.ThingSplashActivity"
-  app_version: "7.5.0"
-  appium_settings_available: false
+  device_name:
+    value_ref: "environment.iot_device.name"
 
 steps:
   - id: 1
     action: "启动并查找，必要时滚动"
-    target: "智能生活 App 首页中名称为 V4#4 的设备"
+    target: "智能生活 App 首页中的目标设备"
     value: ""
-    value_ref: ""
+    value_ref: "environment.iot_device.name"
     expected:
-      - "首页存在名称为 V4#4 的设备"
+      - "首页存在目标设备"
 
   - id: 2
     action: "点击"
-    target: "名称为 V4#4 的设备卡片"
+    target: "目标设备卡片"
     value: ""
-    value_ref: ""
+    value_ref: "environment.iot_device.name"
     expected:
       - "进入设备详情页"
       - "页面展示温度、湿度等设备信息"
@@ -116,13 +110,13 @@ steps:
     value_ref: ""
     expected:
       - "页面显示处理中状态，随后返回智能生活首页"
-      - "上下滚动首页后不存在名称为 V4#4 的设备"
+      - "上下滚动首页后不存在目标设备"
 
 expected:
-  - "V4#4 已解除绑定"
+  - "目标设备已解除绑定"
 
 cleanup:
-  - "下一次执行前人工重新配网，并恢复名称为 V4#4 的在线设备"
+  - "下一次执行前人工重新配网，并恢复环境配置中的目标设备"
 
 missing_info: []
 review_questions: []
