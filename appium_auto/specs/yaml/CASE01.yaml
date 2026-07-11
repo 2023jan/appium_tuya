@@ -1,0 +1,148 @@
+schema_version: "1.0"
+status: "draft"
+
+quality_gate:
+  score: 97
+  grade: "A"
+  gate_status: "passed"
+  automation_ready: true
+  dimensions:
+    objective_and_scope:
+      score: 10
+      max_score: 10
+      reason: "解除指定设备绑定并验证首页不再显示该设备，目标明确。"
+    preconditions:
+      score: 13
+      max_score: 15
+      reason: "配网、在线状态和设备名称明确；原文未单独说明登录态。"
+    steps:
+      score: 25
+      max_score: 25
+      reason: "进入详情、打开设置、选择解绑、二次确认和验证删除的顺序完整。"
+    action_and_target_clarity:
+      score: 15
+      max_score: 15
+      reason: "设备、解绑选项、二次确认按钮均明确。"
+    expected_results:
+      score: 25
+      max_score: 25
+      reason: "页面流转、抽屉、确认弹窗和首页无设备均可观察。"
+    repeatability_and_recovery:
+      score: 9
+      max_score: 10
+      reason: "明确为破坏性单次执行，成功后由人工重新配网恢复。"
+  hard_blockers: []
+  warnings:
+    - "执行后设备解除绑定，下一次运行前需要人工重新配网。"
+    - "该用例默认不进入普通回归，只允许显式开启后单次执行。"
+
+id: "CASE01"
+name: "删除设备成功"
+description: "从高级设置中解除 V4#4 的绑定，并验证首页不再显示该设备。"
+module: "设备"
+priority: ""
+tags: []
+
+execution:
+  repeatable: false
+  destructive: true
+  manual_setup_required: true
+  manual_cleanup_required: true
+  default_regression_enabled: false
+
+preconditions:
+  - "设备已经与智能生活 App 配网成功"
+  - "设备当前在线"
+  - "设备名称为 V4#4"
+
+test_data:
+  device_name: "V4#4"
+  app_display_name: "TEST-智能生活"
+  app_display_name_aliases:
+    - "智能生活"
+  app_package: "com.tuya.smartlifeiot"
+  app_launch_activity: "com.smart.ThingSplashActivity"
+  app_version: "7.5.0"
+  appium_settings_available: false
+
+steps:
+  - id: 1
+    action: "启动并查找，必要时滚动"
+    target: "智能生活 App 首页中名称为 V4#4 的设备"
+    value: ""
+    value_ref: ""
+    expected:
+      - "首页存在名称为 V4#4 的设备"
+
+  - id: 2
+    action: "点击"
+    target: "名称为 V4#4 的设备卡片"
+    value: ""
+    value_ref: ""
+    expected:
+      - "进入设备详情页"
+      - "页面展示温度、湿度等设备信息"
+
+  - id: 3
+    action: "点击"
+    target: "设备详情页右上角修改图标"
+    value: ""
+    value_ref: ""
+    expected:
+      - "进入高级设置页"
+      - "页面底部存在“移除设备”按钮"
+
+  - id: 4
+    action: "点击"
+    target: "移除设备按钮"
+    value: ""
+    value_ref: ""
+    expected:
+      - "底部抽屉显示“解除绑定”和“解绑并清除数据”两个按钮"
+
+  - id: 5
+    action: "点击"
+    target: "解除绑定按钮"
+    value: ""
+    value_ref: ""
+    expected:
+      - "显示二次确认弹窗"
+      - "弹窗标题为“确定要解绑设备吗？”"
+
+  - id: 6
+    action: "点击"
+    target: "二次确认弹窗中的确定按钮"
+    value: ""
+    value_ref: ""
+    expected:
+      - "页面显示处理中状态，随后返回智能生活首页"
+      - "上下滚动首页后不存在名称为 V4#4 的设备"
+
+expected:
+  - "V4#4 已解除绑定"
+
+cleanup:
+  - "下一次执行前人工重新配网，并恢复名称为 V4#4 的在线设备"
+
+missing_info: []
+review_questions: []
+
+source_file: "appium_auto/specs/raw/CASE01删除设备成功.txt"
+source_text: |
+  前置条件：
+  1、设备已经和涂鸦的智能生活app配网成功，
+  2、设备当前在线,在智能生活app里名称是"V4#4"
+
+  操作步骤和预期结果
+  1、进入手机的智能生活app，找到名称为"V4#4"的设备。如果找不到，向上划一下，把列表下面的设备显示在屏幕上
+  预期结果：智能生活app，有名称为"V4#4"的设备
+  2、点击名称为"V4#4"的设备卡片
+  预期结果：进入详情页，展示设备的信息，例如温度，湿度
+  3、点击右上角的修改图标
+  预期：进入高级设置页面，页面底部有"移除设备"按钮
+  4、点击底部的"移除设备"按钮
+  预期结果：底部出来抽屉，有2个按钮，分别是"解除绑定"、"解绑并清除数据"
+  5、点击"解除绑定"按钮
+  预期结果：出来二次确认弹窗。弹窗标题为"确定要解绑设备吗？"
+  6、点击"确定"按钮
+  预期结果：页面开始转圈，随后回到智能生活首页。首页上下滑动，确认没有名称为"V4#4"的设备。

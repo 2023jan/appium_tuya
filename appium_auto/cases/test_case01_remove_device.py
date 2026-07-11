@@ -7,11 +7,11 @@ import pytest
 from appium import webdriver
 from appium.options.android import UiAutomator2Options
 from appium.webdriver.common.appiumby import AppiumBy
+from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.support.ui import WebDriverWait
 
 
 APP_PACKAGE = "com.tuya.smartlifeiot"
-APP_ACTIVITY = "com.smart.ThingSplashActivity"
 DEVICE_NAME = "V4#4"
 DEFAULT_UDID = "ff73089e"
 
@@ -36,14 +36,14 @@ HOME_TAB_SELECTOR = (
 
 
 def _create_run_dir() -> Path:
-    run_id = datetime.now().strftime("%Y%m%d_%H%M%S_CASE00")
+    run_id = datetime.now().strftime("%Y%m%d_%H%M%S_CASE01")
     run_dir = Path("appium_auto/artifacts/runs") / run_id
     run_dir.mkdir(parents=True, exist_ok=True)
     return run_dir
 
 
 def _configure_logger(run_dir: Path) -> logging.Logger:
-    logger = logging.getLogger(f"CASE00.{run_dir.name}")
+    logger = logging.getLogger(f"CASE01.{run_dir.name}")
     logger.setLevel(logging.INFO)
     handler = logging.FileHandler(run_dir / "runtime.log", encoding="utf-8")
     handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
@@ -51,22 +51,20 @@ def _configure_logger(run_dir: Path) -> logging.Logger:
     return logger
 
 
+def _text_selector(text: str) -> str:
+    return f'new UiSelector().text("{text}")'
+
+
 def _wait_for_text(driver: webdriver.Remote, text: str, timeout: int = 20):
-    selector = f'new UiSelector().text("{text}")'
     return WebDriverWait(driver, timeout).until(
         lambda current_driver: current_driver.find_element(
-            AppiumBy.ANDROID_UIAUTOMATOR, selector
+            AppiumBy.ANDROID_UIAUTOMATOR, _text_selector(text)
         )
     )
 
 
 def _find_device(driver: webdriver.Remote):
-    common_tabs = driver.find_elements(
-        AppiumBy.ANDROID_UIAUTOMATOR, 'new UiSelector().text("常用")'
-    )
-    if common_tabs:
-        common_tabs[0].click()
-
+    _select_common_devices(driver)
     devices = driver.find_elements(AppiumBy.ANDROID_UIAUTOMATOR, DEVICE_SELECTOR)
     if devices:
         return devices[0]
@@ -79,6 +77,14 @@ def _find_device(driver: webdriver.Remote):
     )
 
 
+def _select_common_devices(driver: webdriver.Remote) -> None:
+    common_tabs = driver.find_elements(
+        AppiumBy.ANDROID_UIAUTOMATOR, 'new UiSelector().text("常用")'
+    )
+    if common_tabs:
+        common_tabs[0].click()
+
+
 def _return_to_home(driver: webdriver.Remote) -> None:
     for _ in range(3):
         if driver.find_elements(AppiumBy.ANDROID_UIAUTOMATOR, HOME_TAB_SELECTOR):
@@ -88,6 +94,22 @@ def _return_to_home(driver: webdriver.Remote) -> None:
             lambda current_driver: current_driver.current_package == APP_PACKAGE
         )
     raise AssertionError("连续返回后仍未进入智能生活 App 首页")
+
+
+def _assert_device_absent(driver: webdriver.Remote) -> None:
+    _select_common_devices(driver)
+    if driver.find_elements(AppiumBy.ANDROID_UIAUTOMATOR, DEVICE_SELECTOR):
+        raise AssertionError(f"首页仍然存在设备 {DEVICE_NAME}")
+
+    try:
+        driver.find_element(
+            AppiumBy.ANDROID_UIAUTOMATOR, SCROLL_TO_DEVICE_SELECTOR
+        )
+    except NoSuchElementException:
+        pass
+
+    if driver.find_elements(AppiumBy.ANDROID_UIAUTOMATOR, DEVICE_SELECTOR):
+        raise AssertionError(f"滚动首页后仍然存在设备 {DEVICE_NAME}")
 
 
 def _save_evidence(driver: webdriver.Remote, run_dir: Path, name: str) -> None:
@@ -145,13 +167,18 @@ def driver(appium_server_url):
     appium_driver.quit()
 
 
-def test_case00_enter_device_details_and_view_information(driver):
+@pytest.mark.destructive
+@pytest.mark.skipif(
+    os.getenv("RUN_DESTRUCTIVE_CASE01") != "1",
+    reason="CASE01 会解除设备绑定；设置 RUN_DESTRUCTIVE_CASE01=1 后才允许执行",
+)
+def test_case01_remove_device_successfully(driver):
     run_dir = _create_run_dir()
     logger = _configure_logger(run_dir)
     step = "启动 TEST-智能生活"
 
     try:
-        logger.info("开始执行 CASE00，目标设备=%s", DEVICE_NAME)
+        logger.info("开始执行 CASE01，目标设备=%s", DEVICE_NAME)
         driver.activate_app(APP_PACKAGE)
         WebDriverWait(driver, 20).until(
             lambda current_driver: current_driver.current_package == APP_PACKAGE
@@ -167,7 +194,6 @@ def test_case00_enter_device_details_and_view_information(driver):
         _wait_for_text(driver, DEVICE_NAME)
         _wait_for_text(driver, "温度")
         _wait_for_text(driver, "湿度")
-        _save_evidence(driver, run_dir, "device_details")
 
         step = "打开高级设置页"
         WebDriverWait(driver, 20).until(
@@ -176,23 +202,31 @@ def test_case00_enter_device_details_and_view_information(driver):
             )
         ).click()
 
-        step = "验证移除设备按钮"
-        _wait_for_text(driver, "移除设备")
-        _save_evidence(driver, run_dir, "advanced_settings")
+        step = "打开移除设备抽屉"
+        _wait_for_text(driver, "移除设备").click()
+        _wait_for_text(driver, "解除绑定")
+        _wait_for_text(driver, "解绑并清除数据")
+        _save_evidence(driver, run_dir, "remove_device_options")
 
-        step = "返回设备详情页"
-        driver.back()
-        _wait_for_text(driver, DEVICE_NAME)
-        _wait_for_text(driver, "温度")
-        _wait_for_text(driver, "湿度")
+        step = "选择解除绑定"
+        _wait_for_text(driver, "解除绑定").click()
+        _wait_for_text(driver, "确定要解绑设备吗？")
+        _save_evidence(driver, run_dir, "unbind_confirmation")
 
-        step = "返回首页并确认 V4#4 仍存在"
-        driver.back()
-        _find_device(driver)
-        _save_evidence(driver, run_dir, "final_home")
+        step = "确认解除绑定"
+        _wait_for_text(driver, "确定").click()
+        WebDriverWait(driver, 30).until(
+            lambda current_driver: current_driver.find_element(
+                AppiumBy.ANDROID_UIAUTOMATOR, HOME_TAB_SELECTOR
+            )
+        )
 
-        logger.info("CASE00 执行成功，设备和账号状态未被修改")
+        step = "验证首页不存在 V4#4"
+        _assert_device_absent(driver)
+        _save_evidence(driver, run_dir, "final_home_without_device")
+
+        logger.info("CASE01 执行成功，设备 %s 已解除绑定", DEVICE_NAME)
     except Exception as error:
-        logger.exception("CASE00 执行失败，失败步骤=%s", step)
+        logger.exception("CASE01 执行失败，失败步骤=%s", step)
         _save_failure_context(driver, run_dir, step, error)
         raise

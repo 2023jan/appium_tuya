@@ -15,4 +15,7 @@ python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 addopts = "-ra"
+markers = [
+    "destructive: 会改变设备或账号状态、需要人工恢复的破坏性测试",
+]
 
