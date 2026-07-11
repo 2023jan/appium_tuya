@@ -7,11 +7,13 @@
 核心流程：
 
 1. 用户提供文本测试用例，包含操作步骤和预期结果。
-2. AI 通过 Appium MCP 和 Appium Server 连接手机。
-3. AI 在手机上探索目标 App，通过截图、UI 层级、adb 数据和日志自行纠错。
-4. 当观察到的现象与测试用例预期一致后，AI 生成对应的稳定 Appium 自动化脚本。
-5. 生成的脚本通过多次确定性执行验证稳定性。
-6. 后续测试用例沿用同样流程，并复用已经沉淀的框架代码。
+2. `testcase-to-yaml` 对输入进行结构化、质量评分和质量门禁；只有通过门禁的 YAML 才进入自动化流程。
+3. 第一阶段 PoC 先建立人工稳定基线，确认环境、目标 App 和测试场景可以被确定性自动化。
+4. AI 通过 Appium MCP 和 Appium Server 连接手机。
+5. AI 在手机上探索目标 App，通过截图、UI 层级、adb 数据和日志自行纠错。
+6. 当观察到的现象与测试用例预期一致后，AI 生成对应的稳定 Appium 自动化脚本。
+7. 生成的脚本通过多次确定性执行验证稳定性，并与人工稳定基线比较质量差异。
+8. 后续测试用例沿用同样流程，并复用已经沉淀的框架代码。
 
 ## 产品定位
 
@@ -37,12 +39,18 @@
 
 ```text
 文本测试用例
+  -> testcase-to-yaml
+    -> 质量评分和质量门禁
+      -> 未通过：暂停自动化，补充测试信息后重新评价
+      -> 通过：生成标准 YAML
+  -> 人工稳定基线
+  -> 确认环境和测试场景可稳定自动化
   -> AI 脚本生产循环
     -> Appium MCP
       -> Appium Server
         -> Android 真机或模拟器
   -> 生成 pytest + Appium 脚本
-  -> 多次确定性执行验证
+  -> 多次确定性执行验证和质量比较
   -> 产物和报告
 ```
 
@@ -224,13 +232,15 @@ MCP 调用记录用于复盘 AI 探索过程。正式回归执行不依赖 AI，
 
 ```text
 用户文本测试用例
-  -> 文本转 YAML 工具
-  -> 生成结构化 YAML 草稿
+  -> testcase-to-yaml
+  -> 质量评分和质量门禁
+    -> review_required / blocked：暂停自动化，补充信息后重新评价
+    -> passed：生成标准 YAML 草稿
   -> 用户审核和修改
   -> AI 按审核后的 YAML 探索手机并生成 Appium 脚本
 ```
 
-文本转 YAML 工具负责从用户原始描述中提取：
+`testcase-to-yaml` 负责从用户原始描述中提取：
 
 - 用例名称。
 - 前置条件。
@@ -240,9 +250,9 @@ MCP 调用记录用于复盘 AI 探索过程。正式回归执行不依赖 AI，
 - 预期结果。
 - 需要人工确认的歧义点。
 
-如果用户已经提供结构化 YAML，则跳过转换步骤，直接进入审核和执行准备。
+如果用户已经提供结构化 YAML，则检查 Schema 版本、必要字段和质量门禁状态。只有 `quality_gate.gate_status: passed` 且 `automation_ready: true` 时，才跳过重复转换并进入审核和执行准备。
 
-文本转 YAML 能力可以封装成一个独立 skill。该 skill 只负责把自然语言测试用例整理成结构化规格，不负责操作手机、不负责生成 Appium 脚本。这样可以复用于其他自动化项目，也能减少主流程里的提示语复杂度。
+文本转 YAML 能力由项目级 Skill `.agents/skills/testcase-to-yaml/` 提供。该 Skill 同时负责质量评分和门禁，只把通过门禁的输入整理成正式结构化规格；它不负责操作手机、生成 locator 或生成 Appium 脚本。
 
 示例方向：
 
@@ -287,10 +297,10 @@ review_questions:
 
 输出：
 
-- 一个 YAML 草稿。
-- 一个歧义点列表。
-- 一个缺失信息列表。
-- 一个简短的转换说明。
+- 一份包含六个评分维度的质量报告。
+- `passed`、`review_required` 或 `blocked` 门禁状态。
+- 歧义点、缺失信息和少量必要确认问题。
+- 仅在门禁通过时输出标准 YAML 草稿。
 
 约束：
 
@@ -298,16 +308,32 @@ review_questions:
 - 不把不确定内容写成确定事实。
 - 对无法判断的内容写入 `review_questions` 或 `missing_info`。
 - 保留用户原始意图，不主动扩展额外测试范围。
+- 不生成 locator，不替代后续 Appium MCP 页面探索。
+- 质量门禁未通过时，暂停 Appium MCP 和代码生成。
 - 输出 YAML 要便于后续 AI 探索和 Appium 脚本生成。
 
 建议 YAML 字段：
 
 ```yaml
+schema_version: "1.0"
+status: "draft"
+quality_gate:
+  score: 0
+  grade: ""
+  gate_status: ""
+  automation_ready: false
 id: ""
 name: ""
 description: ""
 module: ""
 priority: ""
+tags: []
+execution:
+  repeatable: false
+  destructive: false
+  manual_setup_required: false
+  manual_cleanup_required: false
+  default_regression_enabled: false
 preconditions: []
 test_data: {}
 steps:
@@ -315,13 +341,18 @@ steps:
     action: ""
     target: ""
     value: ""
+    value_ref: ""
     expected: []
 expected: []
 cleanup: []
 missing_info: []
 review_questions: []
-source_text: ""
+source_file: ""
+source_text: |
+  原始测试用例
 ```
+
+质量门禁采用 100 分制：85-100 且没有硬阻塞时为 `passed`，70-84 为 `review_required`，0-69 为 `blocked`。硬阻塞优先于总分，包括测试目标或关键对象未知、关键步骤存在根本歧义、没有可观察预期、破坏性影响或恢复方式无法判断，以及敏感数据无法安全转换为引用等。详细规则和 Schema 以 `.agents/skills/testcase-to-yaml/references/` 为准。
 
 ## 阶段规划
 
@@ -329,13 +360,18 @@ source_text: ""
 
 用一个 App 和少量测试用例验证完整闭环。
 
+第一阶段先在 PoC 内部建立人工稳定基线，用于确认 adb、Appium、目标 App、测试数据、locator、等待和断言本身可稳定工作。该步骤不是新的正式产品阶段，不改变现有 Phase 1、Phase 2、Phase 3 的总体阶段结构。
+
+人工稳定基线通过后，再使用同一个测试用例验证自然语言、Appium MCP 探索和 AI 脚本生成流程。AI 生成脚本的价值需要通过与稳定基线比较来评价，而不是只看单次是否能跑通。
+
 成功标准：
 
 - 手机或模拟器可以通过 adb 连接。
 - Appium Server 可以控制目标 App。
+- 第一条非破坏性用例可以形成可重复执行的人工稳定基线。
 - AI 可以通过 Appium MCP 探索页面。
 - 一个文本测试用例可以转换成 pytest + Appium 脚本。
-- 生成脚本可以连续多次成功执行。
+- 生成脚本可以连续多次成功执行，并能与人工稳定基线比较质量差异。
 - 失败时可以收集诊断产物。
 
 详细计划：`phase_01_poc/plan.md`。
@@ -420,10 +456,11 @@ AI 可能误判页面状态，或者在预期结果模糊时漏过问题。
 ## 待决事项
 
 - 目标 App 的 package name 和 launch activity。
-- 第一条要实现的文本测试用例。
+- CASE00 基线执行所需的账号登录态、设备 `V4#4` 在线状态和设备列表位置。
 
 ## 已确认决策
 
 - 第一阶段只支持 Android。
 - 生成脚本语言使用 Python。
 - Appium MCP 采用全局安装，并注册到 Codex MCP。
+- 第一阶段 PoC 先使用 CASE00 作为人工稳定基线候选；CASE01 删除设备成功保留为破坏性或需要人工恢复环境的测试用例。

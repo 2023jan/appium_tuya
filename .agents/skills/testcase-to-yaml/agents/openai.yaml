@@ -1,0 +1,6 @@
+interface:
+  display_name: "测试用例转 YAML"
+  short_description: "将非结构化测试用例转换为 YAML，并执行自动化质量评分与门禁"
+  default_prompt: "Use $testcase-to-yaml to evaluate this test case and convert it into an automation-ready YAML specification."
+policy:
+  allow_implicit_invocation: true
