@@ -1,0 +1,168 @@
+schema_version: "1.0"
+status: "draft"
+
+quality_gate:
+  score: 98
+  grade: "A"
+  gate_status: "passed"
+  automation_ready: true
+  dimensions:
+    objective_and_scope:
+      score: 10
+      max_score: 10
+      reason: "详情页和设备信息验证目标明确。"
+    preconditions:
+      score: 15
+      max_score: 15
+      reason: "配网、设备名称、在线状态、登录状态和当前设备 App 显示名完整。"
+    steps:
+      score: 25
+      max_score: 25
+      reason: "进入、查看、打开设置和返回的顺序完整。"
+    action_and_target_clarity:
+      score: 14
+      max_score: 15
+      reason: "操作对象和动作明确，具体页面定位方式留给后续探索。"
+    expected_results:
+      score: 24
+      max_score: 25
+      reason: "温湿度区域、移除设备按钮和最终状态均可观察。"
+    repeatability_and_recovery:
+      score: 10
+      max_score: 10
+      reason: "执行结束后设备、账号和绑定状态不变。"
+  hard_blockers: []
+  warnings:
+    - "App 显示名可能因手机品牌或应用市场而不同；当前测试机显示为 TEST-智能生活，其他已知测试机可能显示为智能生活。"
+    - "当前 Xiaomi 测试机因无 SIM 卡无法启用 MIUI USB 安装，Appium Settings 不可安装；执行时跳过设备初始化。"
+
+id: "CASE00"
+name: "进入设备详情页并查看设备信息"
+description: "验证已绑定且在线的 V4#4 可以进入设备详情页和高级设置页，并在返回首页后保持原有状态。"
+module: "设备"
+priority: ""
+tags: []
+
+execution:
+  repeatable: true
+  destructive: false
+  manual_setup_required: false
+  manual_cleanup_required: false
+  default_regression_enabled: true
+
+preconditions:
+  - "设备已经与智能生活 App 配网"
+  - "设备名称为 V4#4"
+  - "设备当前在线"
+  - "用户已经登录"
+
+test_data:
+  device_name: "V4#4"
+  app_display_name: "TEST-智能生活"
+  app_display_name_aliases:
+    - "智能生活"
+  app_package: "com.tuya.smartlifeiot"
+  app_launch_activity: "com.smart.ThingSplashActivity"
+  app_version: "7.5.0"
+  appium_settings_available: false
+
+steps:
+  - id: 1
+    action: "启动"
+    target: "智能生活 App（当前测试机显示为 TEST-智能生活）"
+    value: ""
+    value_ref: ""
+    expected: []
+
+  - id: 2
+    action: "查找，必要时滚动"
+    target: "首页设备列表中名称为 V4#4 的设备"
+    value: ""
+    value_ref: ""
+    expected: []
+
+  - id: 3
+    action: "点击"
+    target: "名称为 V4#4 的设备卡片"
+    value: ""
+    value_ref: ""
+    expected:
+      - "成功进入设备详情页"
+      - "页面显示设备相关信息"
+      - "页面存在温度区域"
+      - "页面存在湿度区域"
+
+  - id: 4
+    action: "点击"
+    target: "设备详情页右上角修改图标"
+    value: ""
+    value_ref: ""
+    expected:
+      - "成功进入高级设置页"
+      - "页面存在“移除设备”按钮"
+
+  - id: 5
+    action: "返回"
+    target: "设备详情页"
+    value: ""
+    value_ref: ""
+    expected: []
+
+  - id: 6
+    action: "返回"
+    target: "首页"
+    value: ""
+    value_ref: ""
+    expected:
+      - "首页仍然存在 V4#4"
+
+expected:
+  - "用例结束后设备和账号状态没有被修改"
+
+cleanup: []
+missing_info: []
+review_questions: []
+
+source_file: "appium_auto/cases/CASE00-进入设备详情页并查看设备信息"
+source_text: |
+  CASE00：进入设备详情页并查看设备信息
+
+  前置条件：
+
+  设备已经与智能生活 App 配网；
+  设备名称是 V4#4；
+  设备当前在线；
+  用户已经登录。
+
+  步骤：
+
+  启动智能生活 App；
+  在首页找到名称为 V4#4 的设备；
+  如果当前屏幕没有显示设备，则滚动设备列表；
+  点击 V4#4 设备卡片。
+
+  预期结果：
+
+  成功进入设备详情页；
+  页面显示设备相关信息；
+  页面存在温度区域；
+  页面存在湿度区域。
+
+  然后继续：
+
+  点击右上角修改图标。
+
+  预期结果：
+
+  成功进入高级设置页；
+  页面存在“移除设备”按钮。
+
+  最后：
+
+  返回设备详情页；
+  返回首页。
+
+  预期结果：
+
+  首页仍然存在 V4#4；
+  用例结束以后，设备和账号状态没有被修改。
