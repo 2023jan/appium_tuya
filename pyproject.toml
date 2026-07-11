@@ -1,0 +1,18 @@
+[project]
+name = "appium-auto"
+version = "0.1.0"
+description = "AI 辅助 Appium 自动化脚本生产框架"
+requires-python = ">=3.12"
+dependencies = [
+    "Appium-Python-Client>=5.0.0",
+    "pytest>=8.0.0",
+    "PyYAML>=6.0.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["appium_auto/cases"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-ra"
+

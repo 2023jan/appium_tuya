@@ -1,0 +1,69 @@
+# Python 虚拟环境
+.venv/
+venv/
+env/
+
+# Python 缓存
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.egg-info/
+
+# 编辑器和系统文件
+.idea/
+.vscode/
+*.swp
+*.swo
+Thumbs.db
+Desktop.ini
+
+# 本地环境配置和敏感信息
+.env
+.env.*
+*.local
+*.pem
+*.key
+*.p12
+*.pfx
+*.keystore
+*.jks
+id_rsa
+id_ed25519
+
+# 本地 Appium / 设备配置，可能包含 udid、账号、App 路径或私有 capability
+capabilities*.json
+capabilities*.yaml
+capabilities*.yml
+appium_auto/config/local.*
+appium_auto/config/*.local.*
+
+# 本地测试资料，可能包含真实账号、设备名称、客户场景或内部业务信息
+appium_auto/cases/*.txt
+appium_auto/specs/local/
+appium_auto/specs/private/
+
+# 自动化运行日志和产物
+appium_auto/logs/
+appium_auto/artifacts/runs/
+appium_auto/artifacts/screenshots/
+appium_auto/artifacts/page_sources/
+appium_auto/artifacts/appium_logs/
+appium_auto/artifacts/device_logs/
+appium_auto/artifacts/mcp_logs/
+
+# Appium / adb / 测试过程中的大文件
+*.log
+*.trace
+*.apk
+*.aab
+*.ipa
+*.mp4
+*.png
+*.jpg
+*.jpeg
+*.xml
