@@ -1,0 +1,11 @@
+# 复制为 local.yaml 后，填写当前测试手机和 App 环境。
+# local.yaml 已被 .gitignore 忽略，不要提交真实设备信息。
+phone:
+  udid: "替换为 adb devices 中的设备序列号"
+
+app:
+  display_name: "智能生活"
+
+iot_device:
+  name: "V4#4"
+  type: "Wi-Fi温湿度传感器"
