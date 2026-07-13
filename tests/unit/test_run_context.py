@@ -8,6 +8,8 @@ from appium_auto.core.run_context import RunContext
 def test_sensitive_step_does_not_save_screenshot_or_page_source(
     monkeypatch, tmp_path
 ):
+    """验证敏感步骤失败时不保存可能包含 Wi-Fi 密码的 UI 证据。"""
+
     monkeypatch.chdir(tmp_path)
     driver = MagicMock()
     driver.current_package = "test.app"

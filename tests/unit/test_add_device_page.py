@@ -5,6 +5,8 @@ from tests.unit.test_home_page import _environment
 
 
 def test_pairing_success_strictly_waits_for_adding_before_success():
+    """验证配网页严格先断言“正在添加”，再等待“添加成功”。"""
+
     driver = MagicMock()
     success_view = MagicMock()
     complete_button = MagicMock()

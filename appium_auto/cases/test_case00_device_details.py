@@ -11,6 +11,8 @@ def test_case00_enter_device_details_and_view_information(
     environment: EnvironmentConfig,
     run_context: RunContext,
 ):
+    """验证可查看设备详情和高级设置，且用例结束后设备仍保持绑定。"""
+
     flow = DeviceLifecycleFlow(driver, environment)
     run_context.logger.info(
         "开始执行 CASE00，目标设备=%s", environment.iot_device.name
@@ -37,4 +39,5 @@ def test_case00_enter_device_details_and_view_information(
         flow.home.find_device()
         run_context.save_evidence(driver, "final_home")
 
+    # CASE00 是稳定基线，最终状态必须与执行前一致，便于后续重复运行。
     run_context.logger.info("CASE00 执行成功，设备和账号状态未被修改")

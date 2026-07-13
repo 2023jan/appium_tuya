@@ -11,6 +11,8 @@ from pathlib import Path
 
 @dataclass
 class Definition:
+    """描述一个可参与调用关系分析的 Python 函数或类方法。"""
+
     symbol: str
     module: str
     name: str
@@ -24,6 +26,8 @@ class Definition:
 
 @dataclass
 class ModuleInfo:
+    """保存单个 Python 模块的语法树、文件路径和导入别名。"""
+
     name: str
     file: Path
     tree: ast.Module
@@ -31,7 +35,11 @@ class ModuleInfo:
 
 
 class CallGraphAnalyzer:
+    """扫描 Python 源码并解析项目内部函数调用与 fixture 注入。"""
+
     def __init__(self, root: Path, sources: list[Path]) -> None:
+        """初始化扫描根目录、源码范围和调用图中间数据。"""
+
         self.root = root.resolve()
         self.sources = sources
         self.modules: dict[str, ModuleInfo] = {}
@@ -43,6 +51,9 @@ class CallGraphAnalyzer:
         self.edges: set[tuple[str, str, str]] = set()
 
     def analyze(self) -> None:
+        """按依赖顺序执行模块、定义、继承、对象类型和调用边分析。"""
+
+        # 后续阶段依赖前面建立的符号表，顺序不能随意调整。
         self._parse_modules()
         self._collect_definitions()
         self._collect_class_bases()
@@ -51,6 +62,8 @@ class CallGraphAnalyzer:
         self._collect_fixture_injections()
 
     def _python_files(self) -> list[Path]:
+        """收集扫描范围内的 Python 文件并排除虚拟环境、缓存和运行产物。"""
+
         files: set[Path] = set()
         for source in self.sources:
             path = (self.root / source).resolve()
@@ -68,6 +81,8 @@ class CallGraphAnalyzer:
         )
 
     def _module_name(self, path: Path) -> str:
+        """将仓库相对文件路径转换为 Python 模块全名。"""
+
         relative = path.relative_to(self.root).with_suffix("")
         parts = list(relative.parts)
         if parts[-1] == "__init__":
@@ -75,6 +90,8 @@ class CallGraphAnalyzer:
         return ".".join(parts)
 
     def _parse_modules(self) -> None:
+        """解析每个 Python 文件并建立模块级导入别名表。"""
+
         for path in self._python_files():
             module_name = self._module_name(path)
             tree = ast.parse(
@@ -82,6 +99,7 @@ class CallGraphAnalyzer:
             )
             info = ModuleInfo(module_name, path, tree)
             for node in tree.body:
+                # 这里只记录模块级导入，避免把函数内部临时导入误当成全局符号。
                 if isinstance(node, ast.Import):
                     for alias in node.names:
                         info.imports[alias.asname or alias.name.split(".")[0]] = (
@@ -96,6 +114,8 @@ class CallGraphAnalyzer:
 
     @staticmethod
     def _decorator_name(node: ast.expr) -> str:
+        """将装饰器语法树转换为可比较的点分名称。"""
+
         if isinstance(node, ast.Call):
             return CallGraphAnalyzer._decorator_name(node.func)
         if isinstance(node, ast.Name):
@@ -106,6 +126,8 @@ class CallGraphAnalyzer:
         return ""
 
     def _collect_definitions(self) -> None:
+        """收集顶层函数、类方法、测试用例和 pytest fixture 定义。"""
+
         for module, info in self.modules.items():
             relative = info.file.relative_to(self.root).as_posix()
             for node in info.tree.body:
@@ -131,6 +153,7 @@ class CallGraphAnalyzer:
                     )
                     self.definitions[symbol] = definition
                     if definition.is_fixture:
+                        # pytest 按参数名注入 fixture，因此额外维护名称到符号的索引。
                         self.fixtures[node.name] = symbol
                 elif isinstance(node, ast.ClassDef):
                     class_symbol = f"{module}.{node.name}"
@@ -152,6 +175,8 @@ class CallGraphAnalyzer:
                         )
 
     def _collect_class_bases(self) -> None:
+        """解析项目内类继承关系，支持把继承方法调用连到真实定义。"""
+
         for module, info in self.modules.items():
             for node in info.tree.body:
                 if not isinstance(node, ast.ClassDef):
@@ -168,6 +193,8 @@ class CallGraphAnalyzer:
                 self.class_bases[class_symbol] = tuple(bases)
 
     def _resolve_name(self, module: str, name: str) -> str | None:
+        """优先在当前模块、再在导入别名中解析项目内符号。"""
+
         local = f"{module}.{name}"
         if local in self.definitions or local in self.classes:
             return local
@@ -179,6 +206,8 @@ class CallGraphAnalyzer:
     def _annotation_type(
         self, module: str, node: ast.expr | None
     ) -> str | None:
+        """从参数类型注解中解析项目内类符号。"""
+
         if isinstance(node, ast.Name):
             candidate = self._resolve_name(module, node.id)
             return candidate if candidate in self.classes else None
@@ -189,6 +218,8 @@ class CallGraphAnalyzer:
 
     @staticmethod
     def _attribute_parts(node: ast.expr) -> list[str] | None:
+        """把多级属性表达式拆成从根对象开始的名称列表。"""
+
         parts: list[str] = []
         current = node
         while isinstance(current, ast.Attribute):
@@ -201,10 +232,14 @@ class CallGraphAnalyzer:
 
     @staticmethod
     def _attribute_text(node: ast.expr) -> str:
+        """将可解析的多级属性表达式拼接为点分文本。"""
+
         parts = CallGraphAnalyzer._attribute_parts(node)
         return ".".join(parts) if parts else ""
 
     def _constructor_type(self, module: str, node: ast.expr) -> str | None:
+        """判断表达式是否实例化项目内类，并返回该类符号。"""
+
         if not isinstance(node, ast.Call):
             return None
         if isinstance(node.func, ast.Name):
@@ -213,6 +248,8 @@ class CallGraphAnalyzer:
         return None
 
     def _collect_class_attributes(self) -> None:
+        """识别构造函数中 self 属性对应的 Page Object 或其他项目类类型。"""
+
         for definition in self.definitions.values():
             if not definition.class_symbol or definition.name != "__init__":
                 continue
@@ -231,11 +268,14 @@ class CallGraphAnalyzer:
                 for target in targets:
                     parts = self._attribute_parts(target)
                     if parts and len(parts) == 2 and parts[0] == "self":
+                        # 记录 self.home = HomePage(...)，用于解析 self.home.find_device()。
                         self.class_attrs[(definition.class_symbol, parts[1])] = (
                             class_type
                         )
 
     def _local_types(self, definition: Definition) -> dict[str, str]:
+        """根据参数注解和局部实例化语句推断函数内变量类型。"""
+
         result: dict[str, str] = {}
         arguments = list(definition.node.args.posonlyargs) + list(
             definition.node.args.args
@@ -266,6 +306,8 @@ class CallGraphAnalyzer:
     def _method_target(
         self, class_symbol: str, attributes: list[str]
     ) -> str | None:
+        """沿对象属性链解析最终方法定义，例如 flow.home.find_device。"""
+
         current = class_symbol
         for attribute in attributes[:-1]:
             current = self.class_attrs.get((current, attribute), "")
@@ -276,8 +318,11 @@ class CallGraphAnalyzer:
     def _find_method(
         self, class_symbol: str, method_name: str, seen: set[str] | None = None
     ) -> str | None:
+        """在当前类及项目内基类中递归查找方法定义。"""
+
         visited = seen or set()
         if class_symbol in visited:
+            # 防止异常继承结构造成无限递归。
             return None
         visited.add(class_symbol)
         target = f"{class_symbol}.{method_name}"
@@ -295,6 +340,8 @@ class CallGraphAnalyzer:
         call: ast.Call,
         local_types: dict[str, str],
     ) -> str | None:
+        """将一个调用表达式解析为唯一的项目内函数或方法符号。"""
+
         if isinstance(call.func, ast.Name):
             candidate = self._resolve_name(definition.module, call.func.id)
             if candidate in self.classes:
@@ -316,6 +363,8 @@ class CallGraphAnalyzer:
         return None
 
     def _collect_calls(self) -> None:
+        """遍历所有函数体并收集能够静态确定的项目内部调用边。"""
+
         for definition in self.definitions.values():
             local_types = self._local_types(definition)
             for node in ast.walk(definition.node):
@@ -323,9 +372,12 @@ class CallGraphAnalyzer:
                     continue
                 target = self._resolve_call(definition, node, local_types)
                 if target and target != definition.symbol:
+                    # 无法唯一解析的调用不连边，避免生成看似完整但错误的图。
                     self.edges.add((definition.symbol, target, "call"))
 
     def _collect_fixture_injections(self) -> None:
+        """根据测试和 fixture 的参数名补充 pytest 自动注入关系。"""
+
         for definition in self.definitions.values():
             if not (definition.is_case or definition.is_fixture):
                 continue
@@ -339,6 +391,8 @@ class CallGraphAnalyzer:
 
 
 def layer_of(definition: Definition) -> str:
+    """根据定义所在目录和标记返回人类可读的项目层级。"""
+
     path = definition.file.as_posix()
     if definition.is_case:
         return "用例"
@@ -356,18 +410,31 @@ def layer_of(definition: Definition) -> str:
 
 
 def short_name(definition: Definition) -> str:
+    """返回适合图节点和索引展示的短函数名称。"""
+
     if definition.class_symbol:
         class_name = definition.class_symbol.rsplit(".", 1)[-1]
         return f"{class_name}.{definition.name}()"
     return f"{definition.name}()"
 
 
+def doc_summary(definition: Definition) -> str:
+    """提取函数 docstring 首行，并转义 Markdown 表格分隔符。"""
+
+    docstring = ast.get_docstring(definition.node, clean=True) or "未提供说明"
+    return docstring.splitlines()[0].replace("|", "\\|")
+
+
 def node_id(symbol: str) -> str:
+    """根据完整符号生成稳定且符合 Mermaid 语法的节点 ID。"""
+
     digest = hashlib.sha1(symbol.encode("utf-8")).hexdigest()[:10]
     return f"n{digest}"
 
 
 def case_id(definition: Definition) -> str:
+    """从测试文件名提取 CASE 编号，无法提取时回退到函数名。"""
+
     match = re.search(r"case(\d+)", definition.file.name, re.IGNORECASE)
     return f"CASE{match.group(1)}" if match else definition.name
 
@@ -377,6 +444,8 @@ def reachable_edges(
     edges: set[tuple[str, str, str]],
     max_depth: int,
 ) -> set[tuple[str, str, str]]:
+    """从指定根函数广度遍历，返回深度限制内的调用边。"""
+
     outgoing: dict[str, list[tuple[str, str]]] = defaultdict(list)
     for source, target, kind in edges:
         outgoing[source].append((target, kind))
@@ -391,6 +460,7 @@ def reachable_edges(
         for target, kind in sorted(outgoing.get(source, [])):
             result.add((source, target, kind))
             next_depth = depth + 1
+            # 只有找到更短路径时才重新入队，控制循环和图规模。
             if next_depth < seen_depth.get(target, max_depth + 1):
                 seen_depth[target] = next_depth
                 queue.append(target)
@@ -402,6 +472,8 @@ def render_graph(
     graph_edges: set[tuple[str, str, str]],
     root: str | None = None,
 ) -> list[str]:
+    """把一组函数调用边渲染为独立 Mermaid flowchart 代码块。"""
+
     symbols = {item for edge in graph_edges for item in edge[:2]}
     if root:
         symbols.add(root)
@@ -422,6 +494,8 @@ def render_graph(
 
 
 def render_document(analyzer: CallGraphAnalyzer, max_depth: int) -> str:
+    """生成包含分层、逐 CASE、共享调用和函数索引的 Markdown 文档。"""
+
     definitions = analyzer.definitions
     case_roots = sorted(
         (
@@ -455,6 +529,7 @@ def render_document(analyzer: CallGraphAnalyzer, max_depth: int) -> str:
     ]
 
     for root_definition in case_roots:
+        # 每个 CASE 单独成图，避免全量调用关系挤在一张不可读的大图中。
         graph_edges = reachable_edges(
             root_definition.symbol, analyzer.edges, max_depth
         )
@@ -502,8 +577,8 @@ def render_document(analyzer: CallGraphAnalyzer, max_depth: int) -> str:
         [
             "## 函数索引",
             "",
-            "| 层级 | 函数或方法 | 定义位置 | 项目内调用者数 | 项目内调用数 |",
-            "| --- | --- | --- | ---: | ---: |",
+            "| 层级 | 函数或方法 | 功能说明 | 定义位置 | 项目内调用者数 | 项目内调用数 |",
+            "| --- | --- | --- | --- | ---: | ---: |",
         ]
     )
     sorted_definitions = sorted(
@@ -518,6 +593,7 @@ def render_document(analyzer: CallGraphAnalyzer, max_depth: int) -> str:
         relative = definition.file.relative_to(analyzer.root).as_posix()
         lines.append(
             f"| {layer_of(definition)} | `{short_name(definition)}` | "
+            f"{doc_summary(definition)} | "
             f"`{relative}:{definition.line}` | "
             f"{len(callers[definition.symbol])} | "
             f"{len(callees[definition.symbol])} |"
@@ -527,6 +603,8 @@ def render_document(analyzer: CallGraphAnalyzer, max_depth: int) -> str:
 
 
 def parse_args() -> argparse.Namespace:
+    """解析仓库根目录、扫描范围、输出路径和图深度参数。"""
+
     parser = argparse.ArgumentParser(
         description="生成 Python 项目的 Mermaid 调用关系图"
     )
@@ -550,6 +628,8 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> int:
+    """执行静态分析并将调用关系文档写入文件或标准输出。"""
+
     args = parse_args()
     root = args.root.resolve()
     sources = args.sources or [Path("appium_auto"), Path("tests")]

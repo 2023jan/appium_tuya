@@ -18,6 +18,8 @@ def test_case01_remove_device_successfully(
     environment: EnvironmentConfig,
     run_context: RunContext,
 ):
+    """验证解除设备绑定成功，并确认首页不再显示目标设备。"""
+
     flow = DeviceLifecycleFlow(driver, environment)
     run_context.logger.info(
         "开始执行 CASE01，目标设备=%s", environment.iot_device.name
@@ -27,6 +29,7 @@ def test_case01_remove_device_successfully(
         flow.activate_and_return_home()
 
     with run_context.step(driver, "解除绑定并验证首页不存在目标设备"):
+        # CASE01 不恢复绑定，只有显式设置安全开关时才会进入本步骤。
         flow.unbind_device()
         run_context.save_evidence(driver, "final_home_without_device")
 

@@ -4,6 +4,8 @@ from appium_auto.flows.device_lifecycle import DeviceLifecycleFlow
 
 
 def _flow_without_driver_initialization() -> DeviceLifecycleFlow:
+    """绕过真实 Driver 初始化，构造只包含 mock Page Object 的 Flow。"""
+
     flow = object.__new__(DeviceLifecycleFlow)
     flow.home = MagicMock()
     flow.panel = MagicMock()
@@ -13,6 +15,8 @@ def _flow_without_driver_initialization() -> DeviceLifecycleFlow:
 
 
 def test_unbind_device_reuses_page_objects():
+    """验证解绑流程按顺序复用设置页和首页对象完成状态检查。"""
+
     flow = _flow_without_driver_initialization()
     flow.open_device_settings = MagicMock()
     flow.home.home_tab_selector = "home-selector"
@@ -27,6 +31,8 @@ def test_unbind_device_reuses_page_objects():
 
 
 def test_pairing_flow_keeps_adding_assertion_before_completion():
+    """验证配网 Flow 先等待页面成功，再点击完成并断言设备详情。"""
+
     flow = _flow_without_driver_initialization()
     logger = MagicMock()
     complete_button = MagicMock()

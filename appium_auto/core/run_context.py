@@ -10,12 +10,16 @@ from appium import webdriver
 
 @dataclass
 class RunContext:
+    """管理单次用例的运行目录、日志和失败诊断证据。"""
+
     case_id: str
     run_dir: Path
     logger: logging.Logger
 
     @classmethod
     def create(cls, case_id: str) -> "RunContext":
+        """为指定用例创建唯一运行目录和独立文件日志器。"""
+
         run_id = datetime.now().strftime(f"%Y%m%d_%H%M%S_%f_{case_id}")
         run_dir = Path("appium_auto/artifacts/runs") / run_id
         run_dir.mkdir(parents=True, exist_ok=True)
@@ -30,6 +34,8 @@ class RunContext:
         return cls(case_id=case_id, run_dir=run_dir, logger=logger)
 
     def save_evidence(self, driver: webdriver.Remote, name: str) -> None:
+        """保存当前页面截图和 Page Source，供失败复盘或结果留证。"""
+
         driver.save_screenshot(str(self.run_dir / f"{name}.png"))
         (self.run_dir / f"{name}.xml").write_text(
             driver.page_source, encoding="utf-8"
@@ -42,10 +48,13 @@ class RunContext:
         error: Exception,
         capture_ui: bool,
     ) -> None:
+        """记录失败步骤、异常和可选 UI 证据，且不覆盖原始异常。"""
+
         if capture_ui:
             try:
                 self.save_evidence(driver, "failure")
             except Exception as evidence_error:
+                # 证据采集失败不能掩盖真正的测试异常，因此单独落盘后继续。
                 (self.run_dir / "evidence_error.txt").write_text(
                     str(evidence_error), encoding="utf-8"
                 )
@@ -64,6 +73,7 @@ class RunContext:
                 ]
             )
         except Exception as context_error:
+            # Session 已断开时 package/activity 可能读取失败，仍需保留已有上下文。
             context.append(f"读取当前页面上下文失败: {context_error}")
         (self.run_dir / "failure_context.txt").write_text(
             "\n".join(context), encoding="utf-8"
@@ -73,6 +83,8 @@ class RunContext:
     def step(
         self, driver: webdriver.Remote, name: str, capture_ui: bool = True
     ) -> Iterator[None]:
+        """包裹一个业务步骤，并在异常时自动保存步骤上下文后原样抛出。"""
+
         self.logger.info("开始步骤：%s", name)
         try:
             yield
