@@ -1,0 +1,4 @@
+interface:
+  display_name: "代码调用关系图"
+  short_description: "分析 Python 函数调用并生成 Mermaid 代码关系图"
+  default_prompt: "使用 $code-callgraph 分析当前 Python 项目并生成函数调用关系图。"
